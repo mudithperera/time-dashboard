@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Time Tracking — Controla Global</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-light: #dbeafe;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --success: #16a34a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 2rem 2rem 1.5rem;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .header .subtitle { opacity: 0.85; font-size: 0.95rem; }
+
+    .date-picker-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .date-picker-bar label { font-size: 0.8rem; opacity: 0.8; font-weight: 500; }
+
+    .date-picker-bar input[type="date"] {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .date-picker-bar input[type="date"]:focus {
+      border-color: rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.25);
+    }
+
+    .date-picker-bar input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      cursor: pointer;
+    }
+
+    .apply-btn {
+      padding: 0.4rem 1rem;
+      border: none;
+      border-radius: 6px;
+      background: white;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .apply-btn:hover { opacity: 0.9; }
+
+    .quick-range-bar {
+      display: flex;
+      gap: 0.35rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .quick-btn {
+      padding: 0.25rem 0.7rem;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 4px;
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .quick-btn:hover, .quick-btn.active {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border-color: rgba(255,255,255,0.5);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    .summary-section {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .grand-total-card {
+      background: var(--primary);
+      color: white;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      min-width: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .grand-total-card .label { font-size: 0.8rem; opacity: 0.85; }
+    .grand-total-card .value { font-size: 2rem; font-weight: 700; }
+    .grand-total-card .sub { font-size: 0.8rem; opacity: 0.7; }
+
+    .person-cards-grid {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    .person-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 180px;
+      flex: 1;
+      transition: box-shadow 0.15s;
+    }
+
+    .person-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+    .person-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .person-name { font-weight: 600; font-size: 0.9rem; }
+    .person-hours { color: var(--text-muted); font-size: 0.85rem; }
+
+    .table-wrapper {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    th {
+      background: #f1f5f9;
+      text-align: left;
+      padding: 0.7rem 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+
+    .date-cell { font-weight: 500; white-space: nowrap; }
+    .total-cell { font-weight: 700; color: var(--primary); }
+    td.zero { color: #cbd5e1; }
+    td.full { color: var(--success); font-weight: 600; }
+
+    .person-col { font-weight: 500; white-space: nowrap; }
+
+    .project-col {
+      font-weight: 600;
+      color: var(--primary);
+      font-size: 0.82rem;
+    }
+
+    .task-col { max-width: 350px; }
+    .task-name { font-weight: 500; display: block; }
+
+    .task-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+      display: block;
+      margin-top: 0.1rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #f1f5f9;
+      color: var(--text-muted);
+      text-transform: capitalize;
+    }
+
+    .hours-cell {
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+      background: #f1f5f9;
+      padding: 0.25rem;
+      border-radius: 8px;
+      width: fit-content;
+    }
+
+    .tab-btn {
+      padding: 0.5rem 1.25rem;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      background: var(--card);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .filter-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      padding: 0.35rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--card);
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text-muted);
+    }
+
+    .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Daily breakdown expandable rows ──── */
+    .daily-date-row {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .daily-date-row:hover td {
+      background: #eef2ff;
+    }
+
+    .expand-icon {
+      display: inline-block;
+      width: 16px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      transition: transform 0.15s;
+    }
+
+    .expand-icon.open {
+      transform: rotate(90deg);
+    }
+
+    .daily-detail-row td {
+      padding: 0.3rem 1rem;
+      font-size: 0.8rem;
+      background: #fafbfd;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .daily-detail-row .detail-task {
+      padding-left: 2rem;
+      color: var(--text-muted);
+    }
+
+    .daily-detail-row .detail-project {
+      color: var(--primary);
+      font-weight: 500;
+      font-size: 0.75rem;
+    }
+
+    .daily-detail-row .detail-hours {
+      text-align: right;
+      font-weight: 500;
+      font-size: 0.8rem;
+    }
+
+    /* ── Refresh button ─────────────────────── */
+    .refresh-btn {
+      padding: 0.4rem 1rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+    .refresh-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .refresh-btn .spinner {
+      display: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .refresh-btn.loading .spinner { display: inline-block; }
+    .refresh-btn.loading .refresh-icon { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .refresh-status {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      margin-top: 0.25rem;
+      min-height: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .header-top { flex-direction: column; }
+      .summary-section { flex-direction: column; }
+      .person-card { min-width: 100%; }
+      table { font-size: 0.8rem; }
+      td, th { padding: 0.5rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1>Controla Global — Team Time Report</h1>
+        <div class="subtitle">AMZ Manager Projects</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.25rem">
+        <div class="date-picker-bar">
+          <label>From</label>
+          <input type="date" id="startDate" />
+          <label>To</label>
+          <input type="date" id="endDate" />
+          <button class="apply-btn" onclick="applyDateRange()">Apply</button>
+          <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+            <span class="refresh-icon">&#8635;</span>
+            <span class="spinner"></span>
+            Refresh Data
+          </button>
+        </div>
+        <div class="refresh-status" id="refreshStatus"></div>
+      </div>
+    </div>
+    <div class="quick-range-bar">
+      <button class="quick-btn" onclick="setQuickRange('today')">Today</button>
+      <button class="quick-btn" onclick="setQuickRange('thisWeek')">This Week</button>
+      <button class="quick-btn" onclick="setQuickRange('lastWeek')">Last Week</button>
+      <button class="quick-btn" onclick="setQuickRange('thisMonth')">This Month</button>
+      <button class="quick-btn" onclick="setQuickRange('lastMonth')">Last Month</button>
+      <button class="quick-btn" onclick="setQuickRange('last3Months')">Last 3 Months</button>
+      <button class="quick-btn" onclick="setQuickRange('all')">All Data</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="summary-section" class="summary-section"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(this, 'daily')">Daily Breakdown</button>
+      <button class="tab-btn" onclick="switchTab(this, 'detail')">Task Details</button>
+    </div>
+
+    <div id="tab-daily" class="tab-content active"></div>
+    <div id="tab-detail" class="tab-content"></div>
+  </div>
+
+  <div class="footer" id="footer"></div>
+
+  <script>
+    const ALL_DATA = [{"person":"Dulan Wijekoon","taskName":"Customer Revision 02","projectName":"AMZ0972 | Changes for AMZ0885 | Faucet Filter (Perlstrahler)","taskStatus":"new onboarding","date":"2026-03-03","mins":104,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"AMZ0992 | GLB QuickMilkBox","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"in revision","date":"2026-03-04","mins":115,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"AMZ0992 | GLB QuickMilkBox","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"in revision","date":"2026-03-04","mins":197,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"AMZ0992 | GLB QuickMilkBox","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"in revision","date":"2026-03-04","mins":24,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"AMZ0992 | GLB QuickMilkBox","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"in revision","date":"2026-03-05","mins":77,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"AMZ0992 | GLB QuickMilkBox","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"in revision","date":"2026-03-05","mins":77,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"Variation","projectName":"AMZ0974 | New Pics AMZ0772 | Lawn corner trimmer (Rasenecktrimmer)","taskStatus":"in progress","date":"2026-03-05","mins":114,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"Variation","projectName":"AMZ0974 | New Pics AMZ0772 | Lawn corner trimmer (Rasenecktrimmer)","taskStatus":"in progress","date":"2026-03-05","mins":24,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"Revisions (German Team)","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"new onboarding","date":"2026-03-05","mins":81,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"Revisions (German Team)","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"new onboarding","date":"2026-03-05","mins":0,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"Revisions (German Team)","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"new onboarding","date":"2026-03-06","mins":27,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dulan Wijekoon","taskName":"AMZ0992 | GLB QuickMilkBox","projectName":"AMZ0992 | GLB QuickMilkBox","taskStatus":"in revision","date":"2026-03-06","mins":60,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"AMZ0983 | Laminating pouches","projectName":"AMZ0983 | Laminating pouches","taskStatus":"delivered","date":"2026-03-03","mins":0,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-03","mins":14,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-03","mins":4,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-03","mins":83,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-03","mins":73,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-03","mins":24,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-03","mins":138,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-03","mins":64,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-03","mins":120,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-04","mins":26,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-04","mins":77,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"AMZ0978 | Ant spray (Ameisenspray)","projectName":"AMZ0978 | Ant spray (Ameisenspray)","taskStatus":"customer feedback (amz)","date":"2026-03-04","mins":14,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"AMZ0978 | Ant spray (Ameisenspray)","projectName":"AMZ0978 | Ant spray (Ameisenspray)","taskStatus":"customer feedback (amz)","date":"2026-03-04","mins":35,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"Internal Quality Checking","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-04","mins":85,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"First Design Draft","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-04","mins":103,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"Revisions (German Team)","projectName":"AMZ0978 | Ant spray (Ameisenspray)","taskStatus":"new onboarding","date":"2026-03-05","mins":11,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"Revisions (German Team)","projectName":"AMZ0978 | Ant spray (Ameisenspray)","taskStatus":"new onboarding","date":"2026-03-05","mins":30,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"Revisions (German Team)","projectName":"AMZ0978 | Ant spray (Ameisenspray)","taskStatus":"new onboarding","date":"2026-03-05","mins":19,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"checking Generating Lifestyle images","projectName":"AMZ0995 | Hobby Horse Obstacles","taskStatus":"new onboarding","date":"2026-03-05","mins":109,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"Revisions (German Team)","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-06","mins":7,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Sajith Dilshan","taskName":"Revisions (German Team)","projectName":"AMZ0983 | Laminating pouches","taskStatus":"new onboarding","date":"2026-03-06","mins":3,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-04","mins":15,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-04","mins":157,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-04","mins":54,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-04","mins":107,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-05","mins":17,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-05","mins":24,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-05","mins":4,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-05","mins":105,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-05","mins":0,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-05","mins":58,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-06","mins":11,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-06","mins":87,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-06","mins":9,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0991 | GLB INTO Jungle Men","projectName":"AMZ0991 | GLB INTO Jungle Men","taskStatus":"in revision","date":"2026-03-06","mins":24,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"in progress","date":"2026-03-06","mins":7,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Kavindu Rasanjana","taskName":"AMZ0968 | Emotion cards (Gefühlskarten)","projectName":"AMZ0968 | Emotion cards (Gefühlskarten)","taskStatus":"3d ongoing","date":"2026-03-06","mins":6,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dilshan Ranasinghe","taskName":"AIV0018 | Table Cloth - Post Edit","projectName":"AIV0018 | Table Cloth - Post Edit","taskStatus":"qc process","date":"2026-03-03","mins":182,"description":"","folder":"AmzManager (AMZ)","list":"AI Product Video"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-04","mins":9,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Final Renders","projectName":"AMZ0974 | New Pics AMZ0772 | Lawn corner trimmer (Rasenecktrimmer)","taskStatus":"delivered","date":"2026-03-04","mins":16,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Final Renders","projectName":"AMZ0974 | New Pics AMZ0772 | Lawn corner trimmer (Rasenecktrimmer)","taskStatus":"delivered","date":"2026-03-04","mins":105,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-04","mins":3,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Revision 1st Phase","projectName":"AMZ0935 | Edit AI photos (Würfel)","taskStatus":"delivered","date":"2026-03-04","mins":2,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-04","mins":108,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-04","mins":71,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-05","mins":20,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-05","mins":5,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"delivered","date":"2026-03-05","mins":206,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"delivered","date":"2026-03-05","mins":86,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"delivered","date":"2026-03-05","mins":17,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"delivered","date":"2026-03-05","mins":3,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Final Renders","projectName":"AMZ0974 | New Pics AMZ0772 | Lawn corner trimmer (Rasenecktrimmer)","taskStatus":"delivered","date":"2026-03-05","mins":16,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"delivered","date":"2026-03-05","mins":51,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Final Renders","projectName":"AMZ0974 | New Pics AMZ0772 | Lawn corner trimmer (Rasenecktrimmer)","taskStatus":"delivered","date":"2026-03-05","mins":5,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"delivered","date":"2026-03-05","mins":18,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-06","mins":11,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Final Renders","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"delivered","date":"2026-03-06","mins":97,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Final Renders","projectName":"AMZ0994 | Replace Screw Box AMZ0817 | Screw box, screw set (Schraubenbox, Schraubenset)","taskStatus":"delivered","date":"2026-03-06","mins":25,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dilshan Ranasinghe","taskName":"Modeling & Texturing","projectName":"AMZ0995 | Hobby Horse Obstacles","taskStatus":"in progress","date":"2026-03-06","mins":57,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Dynal Kavith","taskName":"ROU7 - Online Shop Pictures (Felicia)","projectName":"ROU7 - Online Shop Pictures (Felicia)","taskStatus":"delivered","date":"2026-03-04","mins":9,"description":"","folder":"AmzManager (AMZ)","list":"Flyer Design"},{"person":"Dynal Kavith","taskName":"ROU7 - Online Shop Pictures (Felicia)","projectName":"ROU7 - Online Shop Pictures (Felicia)","taskStatus":"delivered","date":"2026-03-04","mins":79,"description":"","folder":"AmzManager (AMZ)","list":"Flyer Design"},{"person":"Dynal Kavith","taskName":"ROU7 - Online Shop Pictures (Felicia)","projectName":"ROU7 - Online Shop Pictures (Felicia)","taskStatus":"delivered","date":"2026-03-05","mins":164,"description":"","folder":"AmzManager (AMZ)","list":"Flyer Design"},{"person":"Dynal Kavith","taskName":"Briefing","projectName":"AMZ0996 | Regen Poncho","taskStatus":"new onboarding","date":"2026-03-05","mins":36,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Dynal Kavith","taskName":"First Design Draft","projectName":"AMZ0996 | Regen Poncho","taskStatus":"new onboarding","date":"2026-03-05","mins":180,"description":"","folder":"AmzManager (AMZ)","list":"Listing Image Design"},{"person":"Tharindu Dhanushka","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-03","mins":154,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-03","mins":11,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Final Renders","projectName":"AMZ0974 | New Pics AMZ0772 | Lawn corner trimmer (Rasenecktrimmer)","taskStatus":"delivered","date":"2026-03-03","mins":33,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-03","mins":187,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-05","mins":18,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Variations","projectName":"AMZ0935 | Edit AI photos (Würfel)","taskStatus":"queue","date":"2026-03-05","mins":5,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"AMZ0935 | Edit AI photos (Würfel)","projectName":"AMZ0935 | Edit AI photos (Würfel)","taskStatus":"variations","date":"2026-03-05","mins":0,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Variations","projectName":"AMZ0935 | Edit AI photos (Würfel)","taskStatus":"queue","date":"2026-03-05","mins":106,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-05","mins":57,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-05","mins":25,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"},{"person":"Tharindu Dhanushka","taskName":"Modeling & Texturing","projectName":"AMZ0990 | shopping cart (Einkaufstrolley)","taskStatus":"in progress","date":"2026-03-05","mins":242,"description":"","folder":"AmzManager (AMZ)","list":"3D Design"}];
+    let DATA_START = "2026-03-01";
+    let DATA_END = "2026-03-06";
+    let currentFilter = 'all';
+
+    function init() {
+      const el = (id) => document.getElementById(id);
+      const now = new Date();
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const today = now.toISOString().split('T')[0];
+      el('startDate').value = firstOfMonth;
+      el('endDate').value = today;
+      el('startDate').min = DATA_START;
+      el('startDate').max = DATA_END;
+      el('endDate').min = DATA_START;
+      el('endDate').max = DATA_END;
+      applyDateRange();
+    }
+
+    function getFilteredData() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      return ALL_DATA.filter(e => e.date >= start && e.date <= end);
+    }
+
+    function applyDateRange() {
+      const data = getFilteredData();
+      currentFilter = 'all';
+      renderSummary(data);
+      renderDailyBreakdown(data);
+      renderDetailTable(data);
+      updateFooter();
+      highlightActiveQuickBtn();
+    }
+
+    function setQuickRange(range) {
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      let start, end;
+      switch (range) {
+        case 'today': start = end = today; break;
+        case 'thisWeek': {
+          const day = now.getDay();
+          const off = day === 0 ? -6 : 1 - day;
+          const mon = new Date(now); mon.setDate(now.getDate() + off);
+          start = mon.toISOString().split('T')[0]; end = today; break;
+        }
+        case 'lastWeek': {
+          const day = now.getDay();
+          const off = day === 0 ? -6 : 1 - day;
+          const mon = new Date(now); mon.setDate(now.getDate() + off);
+          const lm = new Date(mon); lm.setDate(mon.getDate() - 7);
+          const ls = new Date(mon); ls.setDate(mon.getDate() - 1);
+          start = lm.toISOString().split('T')[0]; end = ls.toISOString().split('T')[0]; break;
+        }
+        case 'thisMonth':
+          start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]; end = today; break;
+        case 'lastMonth': {
+          const f = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const l = new Date(now.getFullYear(), now.getMonth(), 0);
+          start = f.toISOString().split('T')[0]; end = l.toISOString().split('T')[0]; break;
+        }
+        case 'last3Months': {
+          const f = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+          start = f.toISOString().split('T')[0]; end = today; break;
+        }
+        case 'all': start = DATA_START; end = DATA_END; break;
+      }
+      document.getElementById('startDate').value = start;
+      document.getElementById('endDate').value = end;
+      applyDateRange();
+    }
+
+    function highlightActiveQuickBtn() {
+      document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    function renderSummary(data) {
+      const personTotals = {};
+      data.forEach(e => { personTotals[e.person] = (personTotals[e.person] || 0) + e.mins; });
+      const grandTotal = Object.values(personTotals).reduce((a, b) => a + b, 0);
+      const personCards = Object.entries(personTotals)
+        .sort(([,a], [,b]) => b - a)
+        .map(([name, total]) => {
+          const initials = name.split(' ').map(n => n[0]).join('');
+          return `<div class="person-card">
+            <div class="person-avatar">${initials}</div>
+            <div class="person-info">
+              <div class="person-name">${name}</div>
+              <div class="person-hours">${fmtTime(total)}</div>
+            </div>
+          </div>`;
+        }).join('');
+      document.getElementById('summary-section').innerHTML = `
+        <div class="grand-total-card">
+          <div class="label">Total Hours</div>
+          <div class="value">${fmtTime(grandTotal)}</div>
+          <div class="sub">${data.length} entries</div>
+        </div>
+        <div class="person-cards-grid">${personCards}</div>`;
+    }
+
+    // ── Daily breakdown with expandable task details ──
+    function renderDailyBreakdown(data) {
+      const persons = [...new Set(data.map(e => e.person))].sort();
+      const dates = [...new Set(data.map(e => e.date))].sort();
+
+      if (dates.length === 0) {
+        document.getElementById('tab-daily').innerHTML = '<div class="empty-state">No data for this date range</div>';
+        return;
+      }
+
+      // Build lookups
+      const hoursLookup = {};
+      const taskLookup = {}; // date|person -> [{projectName, taskName, hours}]
+      data.forEach(e => {
+        const key = e.person + '|' + e.date;
+        hoursLookup[key] = (hoursLookup[key] || 0) + e.mins;
+
+        const detailKey = e.date + '|' + e.person;
+        if (!taskLookup[detailKey]) taskLookup[detailKey] = [];
+        taskLookup[detailKey].push({
+          projectName: e.projectName,
+          taskName: e.taskName,
+          mins: e.mins
+        });
+      });
+
+      const headerCells = persons.map(p => `<th>${p.split(' ')[0]}</th>`).join('');
+      const colCount = persons.length + 2;
+
+      const rows = dates.map((date, idx) => {
+        const dayLabel = new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric'
+        });
+        const cells = persons.map(p => {
+          const h = hoursLookup[p + '|' + date] || 0;
+          const cls = h === 0 ? 'zero' : h >= 480 ? 'full' : '';
+          return `<td class="${cls}">${h > 0 ? fmtTime(h) : '—'}</td>`;
+        }).join('');
+        const dayTotal = persons.reduce((sum, p) => sum + (hoursLookup[p + '|' + date] || 0), 0);
+
+        // Build detail rows for this date
+        let detailHtml = '';
+        persons.forEach(p => {
+          const tasks = taskLookup[date + '|' + p] || [];
+          // Group by project
+          const byProject = {};
+          tasks.forEach(t => {
+            const key = t.projectName + '|||' + t.taskName;
+            byProject[key] = (byProject[key] || 0) + t.mins;
+          });
+          Object.entries(byProject).forEach(([key, hrs]) => {
+            const [proj, tname] = key.split('|||');
+            detailHtml += `<tr class="daily-detail-row" data-expand="day-${idx}" style="display:none">
+              <td></td>
+              <td colspan="${persons.length}" class="detail-task">
+                <span class="detail-project">${esc(proj)}</span> — ${esc(tname)} (${esc(p.split(' ')[0])})
+              </td>
+              <td class="detail-hours">${fmtTime(hrs)}</td>
+            </tr>`;
+          });
+        });
+
+        return `<tr class="daily-date-row" onclick="toggleDayDetail('day-${idx}', this)">
+          <td class="date-cell"><span class="expand-icon" id="icon-day-${idx}">&#9654;</span> ${dayLabel}</td>
+          ${cells}
+          <td class="total-cell">${fmtTime(dayTotal)}</td>
+        </tr>${detailHtml}`;
+      }).join('');
+
+      document.getElementById('tab-daily').innerHTML = `
+        <div class="table-wrapper"><div class="table-scroll">
+          <table>
+            <thead><tr><th>Date</th>${headerCells}<th>Total</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div></div>`;
+    }
+
+    function toggleDayDetail(id, row) {
+      const details = document.querySelectorAll(`tr[data-expand="${id}"]`);
+      const icon = document.getElementById('icon-' + id);
+      const isOpen = icon.classList.contains('open');
+      details.forEach(r => r.style.display = isOpen ? 'none' : '');
+      icon.classList.toggle('open');
+    }
+
+    // ── Detail table with project names ────
+    function renderDetailTable(data) {
+      const persons = [...new Set(data.map(e => e.person))].sort();
+      const filterChips = [
+        `<button class="filter-chip ${currentFilter === 'all' ? 'active' : ''}" onclick="setPersonFilter('all')">All</button>`,
+        ...persons.map(p =>
+          `<button class="filter-chip ${currentFilter === p ? 'active' : ''}" onclick="setPersonFilter('${esc(p)}')">${p.split(' ')[0]}</button>`
+        )
+      ].join('');
+
+      const filtered = currentFilter === 'all' ? data : data.filter(e => e.person === currentFilter);
+
+      const rows = filtered
+        .sort((a, b) => b.date.localeCompare(a.date) || a.person.localeCompare(b.person))
+        .map(e => `
+          <tr>
+            <td>${e.date}</td>
+            <td class="person-col">${esc(e.person)}</td>
+            <td class="project-col">${esc(e.projectName)}</td>
+            <td class="task-col">
+              <span class="task-name">${esc(e.taskName)}</span>
+              ${e.description ? `<span class="task-desc">${esc(e.description)}</span>` : ''}
+            </td>
+            <td>${esc(e.list)}</td>
+            <td><span class="status-badge">${esc(e.taskStatus)}</span></td>
+            <td class="hours-cell">${fmtTime(e.mins)}</td>
+          </tr>`).join('');
+
+      document.getElementById('tab-detail').innerHTML = `
+        <div class="filter-bar">${filterChips}</div>
+        <div class="table-wrapper"><div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Team Member</th><th>Project</th><th>Task</th><th>List</th><th>Status</th><th style="text-align:right">Hours</th>
+            </tr></thead>
+            <tbody>${rows.length > 0 ? rows : '<tr><td colspan="7" class="empty-state">No entries</td></tr>'}</tbody>
+          </table>
+        </div></div>`;
+    }
+
+    function setPersonFilter(person) {
+      currentFilter = person;
+      const data = getFilteredData();
+      renderDetailTable(data);
+    }
+
+    function switchTab(btn, tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // Format minutes as "Xh Ym" like ClickUp
+    function fmtTime(totalMins) {
+      const h = Math.floor(totalMins / 60);
+      const m = Math.round(totalMins % 60);
+      if (h === 0 && m === 0) return '0m';
+      if (h === 0) return m + 'm';
+      if (m === 0) return h + 'h';
+      return h + 'h ' + m + 'm';
+    }
+
+    function updateFooter() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const fmtDate = (d) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      document.getElementById('footer').textContent = `${fmtDate(start)} — ${fmtDate(end)} · Data fetched on ${new Date().toLocaleDateString('en-US', { dateStyle: 'long' })} · Controla Global`;
+    }
+
+    // ── Refresh data via Trigger.dev API ────
+    const _TK = "tr_dev_Dk8HyOtTalXhvANyr4pM";
+
+    async function refreshData() {
+      const btn = document.getElementById('refreshBtn');
+      const status = document.getElementById('refreshStatus');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      status.textContent = 'Triggering data refresh...';
+
+      try {
+        // Trigger the task
+        const triggerRes = await fetch('https://api.trigger.dev/api/v1/tasks/generate-time-tracking-dashboard/trigger', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + _TK, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payload: {} })
+        });
+
+        if (!triggerRes.ok) throw new Error('Failed to trigger task: ' + triggerRes.status);
+        const { id: runId } = await triggerRes.json();
+        status.textContent = 'Fetching fresh data from ClickUp... (this takes ~2 min)';
+
+        // Poll for completion
+        let attempts = 0;
+        while (attempts < 60) {
+          await new Promise(r => setTimeout(r, 5000));
+          attempts++;
+
+          const pollRes = await fetch('https://api.trigger.dev/api/v3/runs/' + runId, {
+            headers: { 'Authorization': 'Bearer ' + _TK }
+          });
+
+          if (!pollRes.ok) continue;
+          const run = await pollRes.json();
+
+          if (run.status === 'COMPLETED') {
+            // Get output — may be inline or at a presigned URL for large payloads
+            let output = run.output;
+            if (!output && run.outputPresignedUrl) {
+              const outputRes = await fetch(run.outputPresignedUrl);
+              if (outputRes.ok) output = await outputRes.json();
+            }
+
+            // Update data in-memory from run output instead of reloading
+            if (output && output.entries) {
+              ALL_DATA.length = 0;
+              output.entries.forEach(e => ALL_DATA.push(e));
+              if (output.dateRange) {
+                DATA_START = output.dateRange.start;
+                DATA_END = output.dateRange.end;
+              }
+              applyDateRange();
+              status.textContent = 'Data refreshed successfully!';
+              setTimeout(() => { status.textContent = ''; }, 5000);
+            } else {
+              status.textContent = 'Task completed but no data returned. Try again.';
+            }
+            return;
+          } else if (run.status === 'FAILED' || run.status === 'CRASHED' || run.status === 'SYSTEM_FAILURE') {
+            throw new Error('Task failed: ' + (run.error || run.status));
+          }
+
+          const elapsed = attempts * 5;
+          status.textContent = `Fetching fresh data... (${elapsed}s elapsed)`;
+        }
+
+        throw new Error('Timed out waiting for task to complete');
+      } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
